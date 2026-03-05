@@ -3,6 +3,8 @@ Main entry point for Bitcoin backtest system.
 """
 
 import argparse
+import matplotlib
+matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
 from data_fetcher import fetch_btc_data
 from strategy import get_strategy
@@ -27,9 +29,11 @@ def plot_results(data, signals, result, save_path=None):
             data.loc[buy_signals.index, 'close'],
             marker='^',
             color='green',
-            s=100,
+            s=150,
             label='Buy',
-            zorder=5
+            zorder=5,
+            edgecolors='darkgreen',
+            linewidths=1
         )
     
     if len(sell_signals) > 0:
@@ -38,13 +42,16 @@ def plot_results(data, signals, result, save_path=None):
             data.loc[sell_signals.index, 'close'],
             marker='v',
             color='red',
-            s=100,
+            s=150,
             label='Sell',
-            zorder=5
+            zorder=5,
+            edgecolors='darkred',
+            linewidths=1
         )
     
     ax1.set_ylabel('Price ($)', fontsize=12)
-    ax1.set_title(f'Bitcoin Backtest - {result.strategy_name}', fontsize=14, fontweight='bold')
+    ax1.set_title(f'Bitcoin Backtest - {result.strategy_name}\nReturn: {result.total_return_pct:+.2f}% | Win Rate: {result.win_rate:.1f}% | Trades: {result.total_trades}', 
+                  fontsize=14, fontweight='bold')
     ax1.legend(loc='upper left')
     ax1.grid(True, alpha=0.3)
     
@@ -73,7 +80,7 @@ def plot_results(data, signals, result, save_path=None):
         plt.savefig(save_path, dpi=150, bbox_inches='tight')
         print(f"\nPlot saved to: {save_path}")
     
-    plt.show()
+    plt.close()  # Close the figure instead of show()
 
 
 def main():
