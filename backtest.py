@@ -209,7 +209,7 @@ class BacktestEngine:
         )
 
 
-def print_backtest_results(result: BacktestResult):
+def print_backtest_results(result: BacktestResult, currency_suffix: str = '$'):
     """Pretty print backtest results."""
     print("\n" + "="*60)
     print(f"{'BACKTEST RESULTS':^60}")
@@ -217,9 +217,9 @@ def print_backtest_results(result: BacktestResult):
     print(f"Strategy:           {result.strategy_name}")
     print(f"Period:             {result.start_date.strftime('%Y-%m-%d')} to {result.end_date.strftime('%Y-%m-%d')}")
     print("-"*60)
-    print(f"Initial Cash:       ${result.initial_cash:>15,.2f}")
-    print(f"Final Value:        ${result.final_value:>15,.2f}")
-    print(f"Total Return:       ${result.total_return:>15,.2f} ({result.total_return_pct:+.2f}%)")
+    print(f"Initial Cash:       {currency_suffix}{result.initial_cash:>15,.2f}")
+    print(f"Final Value:        {currency_suffix}{result.final_value:>15,.2f}")
+    print(f"Total Return:       {currency_suffix}{result.total_return:>15,.2f} ({result.total_return_pct:+.2f}%)")
     print("-"*60)
     print(f"Sharpe Ratio:       {result.sharpe_ratio:>15.2f}")
     print(f"Max Drawdown:       {result.max_drawdown_pct:>15.2f}%")

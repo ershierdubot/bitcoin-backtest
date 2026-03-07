@@ -1,23 +1,27 @@
 """
-Main entry point for Bitcoin backtest system.
+Main entry point for trading backtest system.
+Supports Bitcoin (BTC-USD) and CSI 300 (000300.SS)
 """
 
 import argparse
 import matplotlib
 matplotlib.use('Agg')  # Use non-interactive backend
 import matplotlib.pyplot as plt
-from data_fetcher import fetch_btc_data
+from data_fetcher import fetch_data_by_symbol, SUPPORTED_SYMBOLS
 from strategy import get_strategy
 from backtest import BacktestEngine, print_backtest_results
 
 
-def plot_results(data, signals, result, save_path=None):
+def plot_results(data, signals, result, save_path=None, currency_suffix='$'):
     """Plot the backtest results."""
     fig, axes = plt.subplots(3, 1, figsize=(14, 10), sharex=True)
     
+    # Get asset name from result
+    asset_name = result.strategy_name.split('_')[0] if hasattr(result, 'asset_name') else 'Asset'
+    
     # Plot 1: Price and trades
     ax1 = axes[0]
-    ax1.plot(data.index, data['close'], label='BTC Price', color='black', linewidth=1)
+    ax1.plot(data.index, data['close'], label='Price', color='black', linewidth=1)
     
     # Mark buy and sell signals
     buy_signals = signals[signals == 1]
@@ -49,8 +53,9 @@ def plot_results(data, signals, result, save_path=None):
             linewidths=1
         )
     
-    ax1.set_ylabel('Price ($)', fontsize=12)
-    ax1.set_title(f'Bitcoin Backtest - {result.strategy_name}\nReturn: {result.total_return_pct:+.2f}% | Win Rate: {result.win_rate:.1f}% | Trades: {result.total_trades}', 
+    ax1.set_ylabel(f'Price ({currency_suffix})', fontsize=12)
+    title_asset = "Bitcoin" if currency_suffix == '$' else "CSI 300"
+    ax1.set_title(f'{title_asset} Backtest - {result.strategy_name}\nReturn: {result.total_return_pct:+.2f}% | Win Rate: {result.win_rate:.1f}% | Trades: {result.total_trades}', 
                   fontsize=14, fontweight='bold')
     ax1.legend(loc='upper left')
     ax1.grid(True, alpha=0.3)
@@ -59,7 +64,7 @@ def plot_results(data, signals, result, save_path=None):
     ax2 = axes[1]
     ax2.plot(result.equity_curve.index, result.equity_curve, label='Portfolio Value', color='blue', linewidth=1.5)
     ax2.axhline(y=result.initial_cash, color='gray', linestyle='--', alpha=0.5, label='Initial Cash')
-    ax2.set_ylabel('Portfolio Value ($)', fontsize=12)
+    ax2.set_ylabel(f'Portfolio Value ({currency_suffix})', fontsize=12)
     ax2.legend(loc='upper left')
     ax2.grid(True, alpha=0.3)
     
@@ -84,7 +89,14 @@ def plot_results(data, signals, result, save_path=None):
 
 
 def main():
-    parser = argparse.ArgumentParser(description='Bitcoin Trading Backtest System')
+    parser = argparse.ArgumentParser(description='Trading Backtest System - Bitcoin & CSI 300')
+    parser.add_argument(
+        '--symbol',
+        type=str,
+        default='BTC-USD',
+        choices=['BTC-USD', '000300.SS'],
+        help='Trading symbol (default: BTC-USD, use 000300.SS for CSI 300)'
+    )
     parser.add_argument(
         '--strategy',
         type=str,
@@ -169,20 +181,26 @@ def main():
     
     args = parser.parse_args()
     
+    # Get symbol info
+    symbol_info = SUPPORTED_SYMBOLS.get(args.symbol, {"name": args.symbol, "currency": "USD", "suffix": "$"})
+    currency_suffix = symbol_info["suffix"]
+    asset_name = symbol_info["name"]
+    
     print("="*60)
-    print(f"{'BITCOIN BACKTEST SYSTEM':^60}")
+    print(f"{asset_name.upper()} BACKTEST SYSTEM".center(60))
     print("="*60)
     
     # Fetch data
-    print(f"\n📊 Fetching Bitcoin data...")
-    data = fetch_btc_data(
+    print(f"\n📊 Fetching {asset_name} data...")
+    data = fetch_data_by_symbol(
+        symbol=args.symbol,
         start_date=args.start_date,
         end_date=args.end_date,
         period=args.period
     )
     print(f"✓ Fetched {len(data)} rows of data")
     print(f"  Period: {data.index[0].strftime('%Y-%m-%d')} to {data.index[-1].strftime('%Y-%m-%d')}")
-    print(f"  Price range: ${data['close'].min():,.2f} - ${data['close'].max():,.2f}")
+    print(f"  Price range: {currency_suffix}{data['close'].min():,.2f} - {currency_suffix}{data['close'].max():,.2f}")
     
     # Get strategy
     print(f"\n📈 Initializing strategy: {args.strategy.upper()}")
@@ -208,7 +226,7 @@ def main():
     
     # Run backtest
     print(f"\n💰 Running backtest...")
-    print(f"  Initial cash: ${args.initial_cash:,.2f}")
+    print(f"  Initial cash: {currency_suffix}{args.initial_cash:,.2f}")
     print(f"  Commission: {args.commission*100:.2f}%")
     print(f"  Position size: {args.position_size*100:.0f}%")
     
@@ -220,12 +238,12 @@ def main():
     result.strategy_name = strategy.get_name()
     
     # Print results
-    print_backtest_results(result)
+    print_backtest_results(result, currency_suffix=currency_suffix)
     
     # Plot if requested
     if args.plot or args.save_plot:
         print("\n📊 Generating plot...")
-        plot_results(data, signals, result, save_path=args.save_plot)
+        plot_results(data, signals, result, save_path=args.save_plot, currency_suffix=currency_suffix)
     
     print("\n✅ Backtest complete!")
     

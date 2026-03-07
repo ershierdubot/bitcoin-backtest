@@ -1,6 +1,7 @@
 """
-Data fetching module for Bitcoin price data.
+Data fetching module for price data.
 Uses Yahoo Finance as the free data source.
+Supports Bitcoin (BTC-USD) and CSI 300 (000300.SS)
 """
 
 import yfinance as yf
@@ -8,17 +9,25 @@ import pandas as pd
 from datetime import datetime, timedelta
 
 
+# Supported symbols
+SUPPORTED_SYMBOLS = {
+    "BTC-USD": {"name": "Bitcoin", "currency": "USD", "suffix": "$"},
+    "000300.SS": {"name": "CSI 300", "currency": "CNY", "suffix": "¥"},
+}
+
+
 class DataFetcher:
-    """Fetches historical cryptocurrency data from Yahoo Finance."""
+    """Fetches historical price data from Yahoo Finance."""
     
     def __init__(self, symbol: str = "BTC-USD"):
         """
         Initialize the data fetcher.
         
         Args:
-            symbol: Yahoo Finance symbol (default: BTC-USD for Bitcoin)
+            symbol: Yahoo Finance symbol (default: BTC-USD for Bitcoin, 000300.SS for CSI 300)
         """
         self.symbol = symbol
+        self.info = SUPPORTED_SYMBOLS.get(symbol, {"name": symbol, "currency": "USD", "suffix": "$"})
     
     def fetch_data(
         self,
@@ -61,15 +70,17 @@ class DataFetcher:
         return info.get('regularMarketPrice', info.get('currentPrice', 0))
 
 
-def fetch_btc_data(
+def fetch_data_by_symbol(
+    symbol: str = "BTC-USD",
     start_date: str = None,
     end_date: str = None,
     period: str = "1y"
 ) -> pd.DataFrame:
     """
-    Convenience function to fetch Bitcoin data.
+    Convenience function to fetch data by symbol.
     
     Args:
+        symbol: Yahoo Finance symbol (BTC-USD or 000300.SS)
         start_date: Start date 'YYYY-MM-DD'
         end_date: End date 'YYYY-MM-DD'
         period: Period to fetch (default: 1y)
@@ -77,17 +88,43 @@ def fetch_btc_data(
     Returns:
         DataFrame with OHLCV data
     """
-    fetcher = DataFetcher("BTC-USD")
+    fetcher = DataFetcher(symbol)
     return fetcher.fetch_data(start_date=start_date, end_date=end_date, period=period)
+
+
+# Backward compatibility
+def fetch_btc_data(
+    start_date: str = None,
+    end_date: str = None,
+    period: str = "1y"
+) -> pd.DataFrame:
+    """Fetch Bitcoin data (backward compatibility)."""
+    return fetch_data_by_symbol("BTC-USD", start_date, end_date, period)
+
+
+def fetch_csi300_data(
+    start_date: str = None,
+    end_date: str = None,
+    period: str = "1y"
+) -> pd.DataFrame:
+    """Fetch CSI 300 index data."""
+    return fetch_data_by_symbol("000300.SS", start_date, end_date, period)
 
 
 if __name__ == "__main__":
     # Test the data fetcher
+    print("Testing data fetcher...")
+    
+    # Test Bitcoin
+    print("\n" + "="*50)
     print("Fetching Bitcoin data...")
-    data = fetch_btc_data(period="1mo")
-    print(f"\nFetched {len(data)} rows of data")
-    print("\nFirst 5 rows:")
-    print(data.head())
-    print("\nLast 5 rows:")
-    print(data.tail())
-    print(f"\nLatest BTC price: ${data['close'].iloc[-1]:,.2f}")
+    data = fetch_data_by_symbol("BTC-USD", period="1mo")
+    print(f"Fetched {len(data)} rows of data")
+    print(f"Latest BTC price: ${data['close'].iloc[-1]:,.2f}")
+    
+    # Test CSI 300
+    print("\n" + "="*50)
+    print("Fetching CSI 300 data...")
+    data = fetch_data_by_symbol("000300.SS", period="1mo")
+    print(f"Fetched {len(data)} rows of data")
+    print(f"Latest CSI 300 price: ¥{data['close'].iloc[-1]:,.2f}")
